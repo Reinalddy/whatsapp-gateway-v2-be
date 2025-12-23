@@ -1,0 +1,55 @@
+# =========================================================================
+# File ini memberitahu Git file atau folder mana yang TIDAK PERLU di-upload
+# ke repository (misalnya GitHub, GitLab).
+# =========================================================================
+
+# Folder dependensi utama. Folder ini bisa dibuat ulang kapan saja
+# dengan menjalankan `npm install` atau `yarn install`.
+# Ini adalah hal PALING PENTING untuk diabaikan.
+node_modules/
+
+# File Environment Variables
+# SANGAT PENTING! File ini berisi rahasia seperti API keys,
+# password database, dll. JANGAN PERNAH di-upload ke repository.
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# File Log
+# File log dibuat saat aplikasi berjalan dan isinya berbeda-beda
+# di setiap komputer.
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Folder hasil build (jika Anda menggunakan TypeScript atau bundler)
+# Folder ini berisi kode yang sudah di-compile/bundle dan bisa
+# dibuat ulang.
+dist/
+build/
+.out/
+
+# Laporan testing coverage
+coverage/
+
+# File sistem operasi
+.DS_Store
+Thumbs.db
+
+# File konfigurasi spesifik editor/IDE
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Cache dari package manager
+.npm
+.pnp.*
+/generated/prisma
+/prisma/migrations
+uploads/
