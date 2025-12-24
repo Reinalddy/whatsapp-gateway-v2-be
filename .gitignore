@@ -52,4 +52,7 @@ Thumbs.db
 .pnp.*
 /generated/prisma
 /prisma/migrations
+/prisma/generated
+/src/generated
 uploads/
+/generated

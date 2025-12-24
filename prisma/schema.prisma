@@ -6,17 +6,18 @@
 
 generator client {
   provider = "prisma-client"
-  // output   = "../src/generated/prisma"
+  output   = "../src/generated/prisma"
+  engineType      = "client" // enable Prisma ORM without Rust
 }
 
 datasource db {
   provider = "postgresql"
 }
-
 model User {
   id        Int      @id @default(autoincrement())
   name      String
   email     String   @unique
   password  String
+  phoneNumber BigInt
   createdAt DateTime @default(now())
 }
