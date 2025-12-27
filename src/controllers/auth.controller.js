@@ -61,6 +61,16 @@ export const login = async (req, res) => {
         }
     })
   } catch (err) {
+    console.log(err)
     res.status(401).json({ message: err.message })
+  }
+}
+
+export const me = async (req, res) => {
+  try {
+    res.json({code: 200, data: req.user })
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ code: 500, message: "Something went wrong" })
   }
 }
