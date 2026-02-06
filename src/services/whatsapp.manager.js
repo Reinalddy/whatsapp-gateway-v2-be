@@ -57,9 +57,11 @@ class WhatsAppSessionManager {
 
             const socket = makeWASocket({
                 auth: state,
-                printQRInTerminal: true,
                 browser: ['WhatsApp Gateway', 'Chrome', '1.0.0'],
-                syncFullHistory: false
+                syncFullHistory: false,
+                connectTimeoutMs: 60000,
+                defaultQueryTimeoutMs: 60000,
+                retryRequestDelayMs: 2000
             })
 
             // Store session info
@@ -107,10 +109,14 @@ class WhatsAppSessionManager {
                     }
 
                     if (shouldReconnect) {
-                        // Reconnect after a delay
+                        // Clean up old socket before reconnecting
+                        this.sessions.delete(sessionName)
+
+                        // Reconnect after a longer delay
                         setTimeout(() => {
+                            console.log(`[${sessionName}] Attempting reconnection...`)
                             this.initSession(sessionName, userId)
-                        }, 3000)
+                        }, 5000)
                     } else {
                         // Session logged out, clean up
                         this.removeSession(sessionName)
