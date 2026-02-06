@@ -15,13 +15,14 @@ datasource db {
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   name        String
-  email       String   @unique
+  email       String    @unique
   password    String
   phoneNumber BigInt
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   devices     Device[]
+  messages    Message[]
 }
 
 model Device {
@@ -40,6 +41,7 @@ model Device {
 
 model Message {
   id        Int      @id @default(autoincrement())
+  userId    Int? // Owner of the message (nullable for existing records)
   deviceId  Int
   to        String // recipient phone number
   type      String // text, image, document
@@ -53,7 +55,9 @@ model Message {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
 
+  @@index([userId])
   @@index([deviceId])
   @@index([to])
   @@index([status])

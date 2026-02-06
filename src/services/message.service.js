@@ -41,6 +41,7 @@ export const sendMessage = async (userId, deviceId, to, type, options = {}) => {
     // Create message record in database (pending status)
     const messageRecord = await prisma.message.create({
         data: {
+            userId: userId,
             deviceId: device.id,
             to: to,
             type: type,
@@ -201,15 +202,8 @@ export const getMessageHistory = async (userId, deviceId, options = {}) => {
 export const getAllUserMessages = async (userId, options = {}) => {
     const { limit = 50, offset = 0, status } = options
 
-    // Get user's device IDs
-    const devices = await prisma.device.findMany({
-        where: { userId },
-        select: { id: true }
-    })
-
-    const deviceIds = devices.map(d => d.id)
-
-    const where = { deviceId: { in: deviceIds } }
+    // Query directly by userId (now that Message has userId)
+    const where = { userId }
     if (status) {
         where.status = status
     }
