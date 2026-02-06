@@ -5,9 +5,9 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
-  engineType      = "client" // enable Prisma ORM without Rust
+  provider   = "prisma-client"
+  output     = "../src/generated/prisma"
+  engineType = "client" // enable Prisma ORM without Rust
 }
 
 datasource db {
@@ -25,14 +25,36 @@ model User {
 }
 
 model Device {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   userId      Int
-  sessionName String   @unique
+  sessionName String    @unique
   phoneNumber String?
-  status      String   @default("pending") // pending, connected, disconnected
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  status      String    @default("pending") // pending, connected, disconnected
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    Message[]
+
   @@index([userId])
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  deviceId  Int
+  to        String // recipient phone number
+  type      String // text, image, document
+  content   String? // text message content
+  mediaUrl  String? // URL or reference to media
+  filename  String? // for documents
+  caption   String? // for images
+  messageId String? // WhatsApp message ID
+  status    String   @default("pending") // pending, sent, delivered, read, failed
+  errorMsg  String? // error message if failed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@index([to])
+  @@index([status])
 }

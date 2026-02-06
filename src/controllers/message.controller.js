@@ -37,7 +37,8 @@ export const sendMessage = async (req, res) => {
             code: 200,
             message: 'Message sent successfully',
             data: {
-                messageId: result.messageId
+                messageId: result.messageId,
+                dbMessageId: result.dbMessageId
             }
         })
     } catch (error) {
@@ -80,6 +81,79 @@ export const checkDevice = async (req, res) => {
         res.status(500).json({
             code: 500,
             message: 'Failed to check device status',
+            error: error.message
+        })
+    }
+}
+
+/**
+ * Get message history for a specific device
+ */
+export const getDeviceMessages = async (req, res) => {
+    try {
+        const userId = req.user.id
+        const deviceId = parseInt(req.params.deviceId)
+        const { limit, offset, status } = req.query
+
+        if (isNaN(deviceId)) {
+            return res.status(400).json({
+                code: 400,
+                message: 'Invalid device ID'
+            })
+        }
+
+        const result = await MessageService.getMessageHistory(userId, deviceId, {
+            limit: limit ? parseInt(limit) : 50,
+            offset: offset ? parseInt(offset) : 0,
+            status
+        })
+
+        if (result.error) {
+            return res.status(404).json({
+                code: 404,
+                message: result.message
+            })
+        }
+
+        res.json({
+            code: 200,
+            message: 'Messages retrieved successfully',
+            data: result
+        })
+    } catch (error) {
+        console.error('Get device messages error:', error)
+        res.status(500).json({
+            code: 500,
+            message: 'Failed to retrieve messages',
+            error: error.message
+        })
+    }
+}
+
+/**
+ * Get all messages for the authenticated user
+ */
+export const getAllMessages = async (req, res) => {
+    try {
+        const userId = req.user.id
+        const { limit, offset, status } = req.query
+
+        const result = await MessageService.getAllUserMessages(userId, {
+            limit: limit ? parseInt(limit) : 50,
+            offset: offset ? parseInt(offset) : 0,
+            status
+        })
+
+        res.json({
+            code: 200,
+            message: 'Messages retrieved successfully',
+            data: result
+        })
+    } catch (error) {
+        console.error('Get all messages error:', error)
+        res.status(500).json({
+            code: 500,
+            message: 'Failed to retrieve messages',
             error: error.message
         })
     }

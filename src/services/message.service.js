@@ -2,7 +2,7 @@ import prisma from '../config/database.js'
 import whatsappManager from './whatsapp.manager.js'
 
 /**
- * Send a message via WhatsApp
+ * Send a message via WhatsApp and record it in the database
  */
 export const sendMessage = async (userId, deviceId, to, type, options = {}) => {
     // Get device and verify ownership
@@ -29,6 +29,19 @@ export const sendMessage = async (userId, deviceId, to, type, options = {}) => {
             code: 400
         }
     }
+
+    // Create message record in database (pending status)
+    const messageRecord = await prisma.message.create({
+        data: {
+            deviceId: device.id,
+            to: to,
+            type: type,
+            content: type === 'text' ? options.message : null,
+            filename: options.filename || null,
+            caption: options.caption || null,
+            status: 'pending'
+        }
+    })
 
     try {
         let result
@@ -62,6 +75,11 @@ export const sendMessage = async (userId, deviceId, to, type, options = {}) => {
                 break
 
             default:
+                // Update message as failed
+                await prisma.message.update({
+                    where: { id: messageRecord.id },
+                    data: { status: 'failed', errorMsg: 'Invalid message type' }
+                })
                 return {
                     error: true,
                     message: 'Invalid message type',
@@ -69,12 +87,32 @@ export const sendMessage = async (userId, deviceId, to, type, options = {}) => {
                 }
         }
 
+        // Update message as sent
+        await prisma.message.update({
+            where: { id: messageRecord.id },
+            data: {
+                status: 'sent',
+                messageId: result.messageId
+            }
+        })
+
         return {
             error: false,
-            ...result
+            ...result,
+            dbMessageId: messageRecord.id
         }
     } catch (error) {
         console.error('Send message error:', error)
+
+        // Update message as failed
+        await prisma.message.update({
+            where: { id: messageRecord.id },
+            data: {
+                status: 'failed',
+                errorMsg: error.message || 'Unknown error'
+            }
+        })
+
         return {
             error: true,
             message: error.message || 'Failed to send message',
@@ -103,4 +141,89 @@ export const canSendMessage = async (userId, deviceId) => {
     }
 
     return { canSend: true, device }
+}
+
+/**
+ * Get message history for a device
+ */
+export const getMessageHistory = async (userId, deviceId, options = {}) => {
+    const { limit = 50, offset = 0, status } = options
+
+    // Verify device ownership
+    const device = await prisma.device.findFirst({
+        where: {
+            id: deviceId,
+            userId
+        }
+    })
+
+    if (!device) {
+        return { error: true, message: 'Device not found' }
+    }
+
+    const where = { deviceId: device.id }
+    if (status) {
+        where.status = status
+    }
+
+    const [messages, total] = await Promise.all([
+        prisma.message.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            skip: offset
+        }),
+        prisma.message.count({ where })
+    ])
+
+    return {
+        error: false,
+        messages,
+        total,
+        limit,
+        offset
+    }
+}
+
+/**
+ * Get all messages for a user (across all devices)
+ */
+export const getAllUserMessages = async (userId, options = {}) => {
+    const { limit = 50, offset = 0, status } = options
+
+    // Get user's device IDs
+    const devices = await prisma.device.findMany({
+        where: { userId },
+        select: { id: true }
+    })
+
+    const deviceIds = devices.map(d => d.id)
+
+    const where = { deviceId: { in: deviceIds } }
+    if (status) {
+        where.status = status
+    }
+
+    const [messages, total] = await Promise.all([
+        prisma.message.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            skip: offset,
+            include: {
+                device: {
+                    select: { sessionName: true }
+                }
+            }
+        }),
+        prisma.message.count({ where })
+    ])
+
+    return {
+        error: false,
+        messages,
+        total,
+        limit,
+        offset
+    }
 }

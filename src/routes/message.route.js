@@ -10,4 +10,10 @@ router.post('/send-message', sendMessageValidator, MessageController.sendMessage
 // Check if a device can send messages
 router.get('/check/:deviceId', MessageController.checkDevice)
 
+// Get all messages for the authenticated user
+router.get('/', MessageController.getAllMessages)
+
+// Get message history for a specific device
+router.get('/device/:deviceId', MessageController.getDeviceMessages)
+
 export default router
