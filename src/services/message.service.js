@@ -1,5 +1,6 @@
 import prisma from '../config/database.js'
 import whatsappManager from './whatsapp.manager.js'
+import { saveBase64File } from '../utils/fileStorage.js'
 
 /**
  * Send a message via WhatsApp and record it in the database
@@ -30,6 +31,13 @@ export const sendMessage = async (userId, deviceId, to, type, options = {}) => {
         }
     }
 
+    // Save media file if present
+    let savedFile = null
+    if (options.mediaBase64 && (type === 'image' || type === 'document')) {
+        const filename = options.filename || `${type}_${Date.now()}`
+        savedFile = saveBase64File(options.mediaBase64, filename, type)
+    }
+
     // Create message record in database (pending status)
     const messageRecord = await prisma.message.create({
         data: {
@@ -37,7 +45,8 @@ export const sendMessage = async (userId, deviceId, to, type, options = {}) => {
             to: to,
             type: type,
             content: type === 'text' ? options.message : null,
-            filename: options.filename || null,
+            mediaUrl: savedFile?.path || null,
+            filename: savedFile?.originalFilename || options.filename || null,
             caption: options.caption || null,
             status: 'pending'
         }
@@ -99,7 +108,8 @@ export const sendMessage = async (userId, deviceId, to, type, options = {}) => {
         return {
             error: false,
             ...result,
-            dbMessageId: messageRecord.id
+            dbMessageId: messageRecord.id,
+            mediaUrl: savedFile?.path || null
         }
     } catch (error) {
         console.error('Send message error:', error)
