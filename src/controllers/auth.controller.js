@@ -1,41 +1,42 @@
 import * as AuthService from '../services/auth.service.js'
+import { serializeUser } from '../utils/serialize.js'
 
 export const register = async (req, res) => {
   try {
 
     const { name, email, password, phoneNumber } = req.body
 
-    if(!name || !email || !password || !phoneNumber) {
-        return res.status(400).json({
-            "code": 400,
-            "message": "Missing required fields"
-        })
+    if (!name || !email || !password || !phoneNumber) {
+      return res.status(400).json({
+        "code": 400,
+        "message": "Missing required fields"
+      })
     }
 
     const result = await AuthService.register(name, email, password, phoneNumber);
 
-    if(result.error) {
-        return res.status(400).json({
-            "code": 400,
-            "message": result.message
-        })
+    if (result.error) {
+      return res.status(400).json({
+        "code": 400,
+        "message": result.message
+      })
     }
 
     res.json({
-        "code": 200,
-        "message": "User registered successfully",
-        "data": {
-          token : result.token,
-          user: result.user
-        }
+      "code": 200,
+      "message": "User registered successfully",
+      "data": {
+        token: result.token,
+        user: serializeUser(result.user)
+      }
     })
 
   } catch (err) {
     console.log(err)
     res.status(500).json({
-        "code": 500,
-        "message":"Something went wrong",
-        "error": err
+      "code": 500,
+      "message": "Something went wrong",
+      "error": err.message
     });
   }
 }
@@ -45,20 +46,20 @@ export const login = async (req, res) => {
     const { email, password } = req.body
     const result = await AuthService.login(email, password)
 
-    if(result.error) {
-        return res.status(400).json({
-            "code": 400,
-            "message": result.message
-        })
+    if (result.error) {
+      return res.status(400).json({
+        "code": 400,
+        "message": result.message
+      })
     }
 
     res.json({
-        "code": 200,
-        "message": "User logged in successfully",
-        "data": {
-          token : result.token,
-          user: result.user
-        }
+      "code": 200,
+      "message": "User logged in successfully",
+      "data": {
+        token: result.token,
+        user: serializeUser(result.user)
+      }
     })
   } catch (err) {
     console.log(err)
@@ -68,7 +69,7 @@ export const login = async (req, res) => {
 
 export const me = async (req, res) => {
   try {
-    res.json({code: 200, data: req.user })
+    res.json({ code: 200, data: serializeUser(req.user) })
   } catch (error) {
     console.log(error)
     res.status(500).json({ code: 500, message: "Something went wrong" })

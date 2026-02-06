@@ -1,0 +1,12 @@
+{
+    "watch": [
+        "src"
+    ],
+    "ext": "js,json",
+    "ignore": [
+        "sessions/*",
+        "sessions/**/*",
+        "node_modules/*"
+    ],
+    "exec": "node --experimental-strip-types src/server.js"
+}
