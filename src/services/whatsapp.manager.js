@@ -3,6 +3,7 @@ import { Boom } from '@hapi/boom'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import laravelWebhookService from './laravel.webhook.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -145,6 +146,36 @@ class WhatsAppSessionManager {
                             status: 'connected',
                             phoneNumber: session?.phoneNumber
                         })
+                    }
+                }
+            })
+
+            // Handle incoming messages - forward to Laravel backend
+            socket.ev.on('messages.upsert', async (m) => {
+                if (m.type !== 'notify') return
+
+                for (const message of m.messages) {
+                    try {
+                        // Process and forward to Laravel
+                        const result = await laravelWebhookService.processIncomingMessage(message, sessionName)
+
+                        if (result.success) {
+                            console.log(`[${sessionName}] Message forwarded to Laravel:`, result.data?.data?.message_id)
+                        } else if (result.skipped) {
+                            // Skipped messages (outgoing, group, etc.) - no log needed
+                        } else {
+                            console.error(`[${sessionName}] Failed to forward message:`, result.error)
+                        }
+
+                        // Emit incoming message event via Socket.IO
+                        if (this.io && !message.key.fromMe) {
+                            this.io.to(`session:${sessionName}`).emit('message', {
+                                sessionName,
+                                message: laravelWebhookService.formatMessage(message, sessionName)
+                            })
+                        }
+                    } catch (error) {
+                        console.error(`[${sessionName}] Error processing incoming message:`, error.message)
                     }
                 }
             })
