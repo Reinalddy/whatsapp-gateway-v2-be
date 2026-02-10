@@ -318,20 +318,6 @@ export const saveIncomingMessage = async (userId, deviceId, message) => {
             }
         })
 
-        // const messageRecord = await prisma.message.create({
-        //     data: {
-        //         userId: userId,
-        //         deviceId: deviceId,
-        //         to: to,
-        //         type: type,
-        //         content: type === 'text' ? options.message : null,
-        //         mediaUrl: savedFile?.path || null,
-        //         filename: savedFile?.originalFilename || options.filename || null,
-        //         caption: options.caption || null,
-        //         status: 'pending'
-        //     }
-        // })
-
         console.log(`Saved incoming ${type} message from ${from}`)
 
     } catch (error) {
