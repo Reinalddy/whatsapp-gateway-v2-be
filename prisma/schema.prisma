@@ -5,9 +5,9 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider   = "prisma-client"
-  output     = "../src/generated/prisma"
-  engineType = "client" // enable Prisma ORM without Rust
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  // engineType = "client" // enable Prisma ORM without Rust
 }
 
 datasource db {
@@ -44,6 +44,8 @@ model Message {
   userId    Int? // Owner of the message (nullable for existing records)
   deviceId  Int
   to        String // recipient phone number
+  from      String? // sender phone number (for incoming messages)
+  direction String   @default("outbound") // inbound, outbound
   type      String // text, image, document
   content   String? // text message content
   mediaUrl  String? // URL or reference to media

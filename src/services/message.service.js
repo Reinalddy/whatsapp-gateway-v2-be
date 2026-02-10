@@ -1,6 +1,7 @@
 import prisma from '../config/database.js'
 import whatsappManager from './whatsapp.manager.js'
 import { saveBase64File } from '../utils/fileStorage.js'
+import { downloadMediaMessage } from 'baileys'
 
 /**
  * Send a message via WhatsApp and record it in the database
@@ -38,22 +39,21 @@ export const sendMessage = async (userId, deviceId, to, type, options = {}) => {
         savedFile = saveBase64File(options.mediaBase64, filename, type)
     }
 
-    // Create message record in database (pending status)
-    const messageRecord = await prisma.message.create({
-        data: {
-            userId: userId,
-            deviceId: device.id,
-            to: to,
-            type: type,
-            content: type === 'text' ? options.message : null,
-            mediaUrl: savedFile?.path || null,
-            filename: savedFile?.originalFilename || options.filename || null,
-            caption: options.caption || null,
-            status: 'pending'
-        }
-    })
-
     try {
+        // Create message record in database (pending status)
+        const messageRecord = await prisma.message.create({
+            data: {
+                userId: userId,
+                deviceId: device.id,
+                to: to,
+                type: type,
+                content: type === 'text' ? options.message : null,
+                mediaUrl: savedFile?.path || null,
+                filename: savedFile?.originalFilename || options.filename || null,
+                caption: options.caption || null,
+                status: 'pending'
+            }
+        })
         let result
 
         switch (type) {
@@ -229,5 +229,112 @@ export const getAllUserMessages = async (userId, options = {}) => {
         total,
         limit,
         offset
+    }
+}
+
+/**
+ * Save incoming message from WhatsApp
+ */
+export const saveIncomingMessage = async (userId, deviceId, message) => {
+    try {
+        const msg = message.message
+        if (!msg) return
+
+        // Determine message type
+        let type = 'text'
+        let content = null
+        if (msg.conversation) {
+            type = 'text'
+            content = msg.conversation
+        } else if (msg.extendedTextMessage) {
+            type = 'text'
+            content = msg.extendedTextMessage.text
+        } else if (msg.imageMessage) {
+            type = 'image'
+            content = msg.imageMessage.caption
+        } else if (msg.documentMessage) {
+            type = 'document'
+            content = msg.documentMessage.caption
+        } else if (msg.videoMessage) {
+            type = 'video'
+            content = msg.videoMessage.caption
+        } else if (msg.audioMessage) {
+            type = 'audio'
+        }
+
+        // Handle media download
+        let savedFile = null
+        if (type === 'image' || type === 'document' || type === 'video' || type === 'audio') {
+            try {
+                // Download media buffer
+                // Note: using direct downloadMediaMessage from baileys
+                const buffer = await downloadMediaMessage(
+                    message,
+                    'buffer',
+                    {},
+                    {
+                        // logger: console, // optional
+                        // reuploadRequest: update => ... 
+                    }
+                )
+
+                if (buffer) {
+                    const base64 = buffer.toString('base64')
+                    let filename = `incoming_${Date.now()}`
+
+                    if (type === 'document' && msg.documentMessage) {
+                        filename = msg.documentMessage.fileName || filename
+                    }
+
+                    savedFile = saveBase64File(base64, filename, type)
+                }
+            } catch (error) {
+                console.error('Failed to download media:', error)
+            }
+        }
+
+        // Extract sender info
+        let from = message.key.remoteJid
+        if (from) {
+            from = from.split('@')[0]
+        }
+
+        console.log(from, "from save message");
+        // Save to database
+        await prisma.message.create({
+            data: {
+                userId,
+                deviceId,
+                to: 'me',
+                from: from,
+                direction: 'inbound',
+                type,
+                content,
+                mediaUrl: savedFile?.path || null,
+                filename: savedFile?.originalFilename || null,
+                caption: content,
+                messageId: message.key.id,
+                status: 'delivered'
+            }
+        })
+
+        // const messageRecord = await prisma.message.create({
+        //     data: {
+        //         userId: userId,
+        //         deviceId: deviceId,
+        //         to: to,
+        //         type: type,
+        //         content: type === 'text' ? options.message : null,
+        //         mediaUrl: savedFile?.path || null,
+        //         filename: savedFile?.originalFilename || options.filename || null,
+        //         caption: options.caption || null,
+        //         status: 'pending'
+        //     }
+        // })
+
+        console.log(`Saved incoming ${type} message from ${from}`)
+
+    } catch (error) {
+        console.error('Error saving incoming message:', error)
     }
 }

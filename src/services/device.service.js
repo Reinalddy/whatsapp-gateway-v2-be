@@ -29,7 +29,7 @@ export const createDevice = async (userId, sessionName) => {
 
     // Initialize WhatsApp session
     try {
-        await whatsappManager.initSession(sessionName, userId)
+        await whatsappManager.initSession(sessionName, userId, device.id)
     } catch (error) {
         // If session init fails, delete the device record
         await prisma.device.delete({ where: { id: device.id } })
@@ -192,7 +192,7 @@ export const reconnectDevice = async (userId, deviceId) => {
 
     // Try to initialize session
     try {
-        await whatsappManager.initSession(device.sessionName, userId)
+        await whatsappManager.initSession(device.sessionName, userId, device.id)
         return { error: false, message: 'Reconnection initiated' }
     } catch (error) {
         return { error: true, message: error.message }

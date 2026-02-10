@@ -3,7 +3,9 @@ import { Boom } from '@hapi/boom'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { downloadMediaMessage } from 'baileys'
 import laravelWebhookService from './laravel.webhook.js'
+import * as MessageService from './message.service.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -40,7 +42,7 @@ class WhatsAppSessionManager {
     /**
      * Initialize a new WhatsApp session
      */
-    async initSession(sessionName, userId) {
+    async initSession(sessionName, userId, deviceId) {
         // Check if session already exists
         if (this.sessions.has(sessionName)) {
             const existingSession = this.sessions.get(sessionName)
@@ -69,6 +71,7 @@ class WhatsAppSessionManager {
             this.sessions.set(sessionName, {
                 socket,
                 userId,
+                deviceId,
                 isConnected: false,
                 phoneNumber: null
             })
@@ -116,7 +119,7 @@ class WhatsAppSessionManager {
                         // Reconnect after a longer delay
                         setTimeout(() => {
                             console.log(`[${sessionName}] Attempting reconnection...`)
-                            this.initSession(sessionName, userId)
+                            this.initSession(sessionName, userId, deviceId)
                         }, 5000)
                     } else {
                         // Session logged out, clean up
@@ -176,6 +179,22 @@ class WhatsAppSessionManager {
                         }
                     } catch (error) {
                         console.error(`[${sessionName}] Error processing incoming message:`, error.message)
+                    }
+
+                    // Save incoming message to database
+                    if (!message.key.fromMe) {
+                        try {
+                            const session = this.sessions.get(sessionName)
+                            if (session && session.deviceId) {
+                                await MessageService.saveIncomingMessage(
+                                    session.userId,
+                                    session.deviceId,
+                                    message
+                                )
+                            }
+                        } catch (error) {
+                            console.error(`[${sessionName}] Failed to save incoming message:`, error.message)
+                        }
                     }
                 }
             })
@@ -353,7 +372,7 @@ class WhatsAppSessionManager {
                 if (fs.existsSync(sessionDir)) {
                     console.log(`Restoring session: ${device.sessionName}`)
                     try {
-                        await this.initSession(device.sessionName, device.userId)
+                        await this.initSession(device.sessionName, device.userId, device.id)
                     } catch (error) {
                         console.error(`Failed to restore session ${device.sessionName}:`, error.message)
                     }
