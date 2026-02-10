@@ -294,7 +294,7 @@ export const saveIncomingMessage = async (userId, deviceId, message) => {
         }
 
         // Extract sender info
-        let from = message.key.remoteJid
+        let from = message.key.remoteJidAlt
         if (from) {
             from = from.split('@')[0]
         }

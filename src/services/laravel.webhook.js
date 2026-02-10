@@ -53,7 +53,7 @@ class LaravelWebhookService {
         const msg = message.message
 
         // Extract phone number from JID (remove @s.whatsapp.net)
-        const phone = key.remoteJid?.replace('@s.whatsapp.net', '') || ''
+        const phone = key.remoteJidAlt?.replace('@s.whatsapp.net', '') || ''
 
         // Get push name (contact name)
         const name = message.pushName || null
